@@ -1,6 +1,4 @@
 package myDemo;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileVisitResult;
@@ -9,8 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.LowerCaseFilterFactory;
@@ -25,24 +21,13 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexOptions;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexReaderContext;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.BytesRef;
-import org.jsoup.Jsoup;
 
 
 public class Indexing {
@@ -50,7 +35,6 @@ public class Indexing {
 	static LuceneIndexConfig config = new LuceneIndexConfig();
 	
 	//String indexPath = "C:\\Personal\\OVGU\\WiSe2020\\IR\\eclipse\\Lucene\\indexedFiles2";
-	private static int docId = 0;
 
 
 	public static void main(String[] args) throws IOException
@@ -108,30 +92,6 @@ public class Indexing {
 
 
 	}
-	
-	private static void writeINexcel(ArrayList<String> list, FileWriter csvwriter, StringBuilder sb) throws IOException {
-	
-		if(docId==0) {
-			sb.append("id");
-			sb.append("\t");
-			sb.append("docPath");
-			sb.append("\t");
-			sb.append("docContent");
-			sb.append('\n');
-		}
-
-		sb.append(docId);
-		sb.append("\t");
-		sb.append(list);
-		sb.append('\n');
-
-
-		System.out.println(sb.toString());
-		csvwriter.write(sb.toString());
-
-		System.out.println("done!");
-
-	}
 
 	private static void indexDocs(IndexWriter writer, Path path) throws IOException {	
 
@@ -152,16 +112,9 @@ public class Indexing {
 							indexTextDoc(writer, file, attrs.lastModifiedTime().toString());
 							
 						} 
-						/*
-						 * else if (file.toString().toLowerCase().endsWith(".htm") ||
-						 * file.toString().toLowerCase().endsWith(".html") ) { //Index this html file
-						 * indexHtmlDoc(writer, file, attrs.lastModifiedTime().toString());
-						 * termVectors(); }
-						 */
 						else {
 							System.out.println("Skipped " + file);
 						}
-
 					} 
 					catch (IOException ioe) {
 						ioe.printStackTrace();
@@ -175,52 +128,10 @@ public class Indexing {
 			//Index this text file
 			indexTextDoc(writer, path, Files.getLastModifiedTime(path).toString());
 		}
-		else if (path.toString().toLowerCase().endsWith(".htm") || path.toString().toLowerCase().endsWith(".html")) 
-		{
-			//Index this html file
-			indexHtmlDoc(writer, path, Files.getLastModifiedTime(path).toString());
-		}
 		else {
 			System.out.println("Skipped: " + path);
 		}
 	}
-
-	public static void indexHtmlDoc(IndexWriter writer, Path file, String lastModified) throws IOException 
-	{
-
-		Document doc = new Document();
-
-		//Create lucene Document
-		try (InputStream stream = Files.newInputStream(file)) 
-		{
-			org.jsoup.nodes.Document htmldoc = Jsoup.parse(new File(file.toString()),"utf-8");
-
-			doc.add(new StringField("path", file.toString(), Field.Store.YES));
-			doc.add(new TextField("title", htmldoc.title(), Field.Store.YES));
-			doc.add(new TextField("modified", lastModified, Field.Store.YES));
-			doc.add(new TextField("contents", htmldoc.body().text(), Store.YES));
-
-			FieldType myFieldType = new FieldType(TextField.TYPE_STORED);
-			myFieldType.setStoreTermVectors(true);
-			myFieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS);
-			myFieldType.setTokenized(true);
-			myFieldType.setStored(true);
-			myFieldType.setStoreTermVectors(true);  //Store Term Vectors
-			myFieldType.freeze();
-			StoredField termV = new StoredField("termV",htmldoc.body().text(),myFieldType);
-			doc.add(termV);
-
-			//Updates a document by first deleting the document(s) 
-			writer.updateDocument(new Term("path", file.toString()), doc);
-
-			System.out.println("Added: " + doc.get("path"));
-
-		} 
-		catch (Exception e) {
-			System.out.println("Could not add: " + doc.get("path"));
-		} 
-	}
-
 
 	public static void indexTextDoc(IndexWriter writer, Path file, String lastModified) throws IOException 
 	{
